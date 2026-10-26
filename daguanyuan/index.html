@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4f0e7">
+  <title>大观园 AR</title>
+  <style>
+    :root {
+      --paper: #f4f0e7;
+      --ink: #405144;
+      --green: #526b55;
+      --muted: #7c8478;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+        "Microsoft YaHei", sans-serif;
+      text-align: center;
+    }
+    main { width: min(100%, 420px); }
+    .mark {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 22px;
+      border: 1px solid #aab5a5;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--green);
+      font-size: 30px;
+    }
+    h1 { margin: 0 0 12px; font-size: 25px; letter-spacing: 3px; }
+    p { color: var(--muted); font-size: 14px; line-height: 1.8; }
+    #status { min-height: 26px; margin: 18px 0; }
+    .launch {
+      display: none;
+      width: 100%;
+      margin-top: 14px;
+      padding: 14px 18px;
+      border: 0;
+      border-radius: 999px;
+      color: white;
+      background: var(--green);
+      font-size: 16px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .launch img { width: 20px; height: 20px; vertical-align: middle; margin-right: 8px; }
+    .note { margin-top: 22px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="mark" aria-hidden="true">园</div>
+    <h1>大观园 AR</h1>
+    <p id="status">正在尝试打开增强现实体验……</p>
+
+    <!-- iPhone：Apple AR Quick Look 需要 rel="ar" 的 USDZ 链接 -->
+    <a id="ios-launch" class="launch" rel="ar" href="./daguan.usdz">
+      <img alt="" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=">
+      打开大观园 AR
+    </a>
+
+    <!-- Android：链接会被脚本替换为 Scene Viewer intent -->
+    <a id="android-launch" class="launch" href="#">
+      <img alt="" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=">
+      打开大观园 AR
+    </a>
+
+    <p class="note">如果没有自动打开，请点击上方按钮。进入 AR 后，仍可能需要按手机提示扫描并轻触桌面或地面放置模型。</p>
+  </main>
+
+  <script>
+    (() => {
+      const status = document.getElementById("status");
+      const iosLink = document.getElementById("ios-launch");
+      const androidLink = document.getElementById("android-launch");
+
+      const glbUrl = new URL("./daguan.glb", location.href).href;
+      const usdzUrl = new URL("./daguan.usdz", location.href).href;
+      iosLink.href = usdzUrl;
+
+      const fallback = new URL(location.href);
+      fallback.searchParams.set("fallback", "1");
+      const fallbackUrl = fallback.href;
+
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      const isFallback = new URLSearchParams(location.search).has("fallback");
+
+      const showIOSFallback = () => {
+        status.textContent = "如果 AR 没有自动打开，请点击下方按钮。";
+        iosLink.style.display = "inline-block";
+      };
+
+      const androidIntent =
+        "intent://arvr.google.com/scene-viewer/1.0?file=" +
+        encodeURIComponent(glbUrl) +
+        "&mode=ar_preferred&title=" + encodeURIComponent("大观园") +
+        "#Intent;scheme=https;package=com.google.android.googlequicksearchbox;" +
+        "action=android.intent.action.VIEW;" +
+        "S.browser_fallback_url=" + encodeURIComponent(fallbackUrl) +
+        ";end;";
+
+      androidLink.href = androidIntent;
+
+      if (isFallback) {
+        if (isIOS) {
+          showIOSFallback();
+        } else if (isAndroid) {
+          status.textContent = "请点击下方按钮启动安卓 AR 查看器。";
+          androidLink.style.display = "inline-block";
+        } else {
+          status.textContent = "请使用支持 AR 的手机打开此页面。";
+        }
+        return;
+      }
+
+      if (isIOS) {
+        status.textContent = "正在尝试打开 iPhone AR Quick Look……";
+        // 自动打开可能被 Safari 拦截；若被拦截，会显示手动入口。
+        window.setTimeout(() => {
+          try { iosLink.click(); } catch (_) {}
+        }, 250);
+        window.setTimeout(showIOSFallback, 1200);
+      } else if (isAndroid) {
+        status.textContent = "正在尝试打开安卓 AR 查看器……";
+        window.setTimeout(() => {
+          location.href = androidIntent;
+        }, 250);
+        window.setTimeout(() => {
+          status.textContent = "如果 AR 没有自动打开，请点击下方按钮。";
+          androidLink.style.display = "inline-block";
+        }, 1500);
+      } else {
+        status.textContent = "请用 iPhone 或支持 AR 的安卓手机扫描二维码体验。";
+      }
+    })();
+  </script>
+</body>
+</html>
